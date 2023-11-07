@@ -12,11 +12,11 @@ from dotenv import load_dotenv
 
 # Setup environment and logger
 load_dotenv()  # This automatically finds the .env file
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configure APIRouter and constants
 router = APIRouter()
-AUDIO_FILES_DIRECTORY = "audio-files"
 TRANSLATOR = GoogleTranslator(source='en', target='ar')
 MODEL = "yorickvp/llava-13b:2facb4a474a0462c15041b78b1ad70952ea46b5ec6ad29583c0b29dbd4249591"
 
@@ -29,6 +29,7 @@ async def health():
 def remove_file(file_path: str):
     try:
         os.remove(file_path)
+        logger.info(f"Successfully deleted {file_path}")
     except OSError as e:
         logger.error(f"Failed to delete {file_path}: {e}")
 
@@ -57,12 +58,16 @@ async def create_audio_file(translation: str) -> str:
 
 
 @router.post("/chat-with-image")
-async def chat_with_image(file: UploadFile = File(...), prompt: str = ""):
+async def chat_with_image(background_tasks: BackgroundTasks, file: UploadFile = File(...), prompt: str = ""):
     try:
         file_path = await save_upload_file(file)
         full_description, translation = await process_image(file_path, prompt)
         audio_file_path = await create_audio_file(translation)
-        return FileResponse(audio_file_path, media_type="audio/mpeg", filename=os.path.basename(audio_file_path))
+        response = FileResponse(
+            audio_file_path, media_type="audio/mpeg", filename=os.path.basename(audio_file_path))
+        # Schedule the file to be deleted after the response
+        background_tasks.add_task(remove_file, audio_file_path)
+        return response
     except Exception as e:
         logger.error(
             f"An error occurred during processing: {e}", exc_info=True)
@@ -78,14 +83,10 @@ async def chat_with_image_test(file: UploadFile = File(...), prompt: str = ""):
         file_path = await save_upload_file(file)
         full_description, translation = await process_image(file_path, prompt)
 
-        os.makedirs(AUDIO_FILES_DIRECTORY, exist_ok=True)
         audio_file_path = await create_audio_file(translation)
-        audio_file_name = os.path.basename(audio_file_path)
-        final_path = os.path.join(AUDIO_FILES_DIRECTORY, audio_file_name)
-        shutil.move(audio_file_path, final_path)
 
         response_data = {
-            "audio_url": audio_file_name,
+            "audio_url": os.path.basename(audio_file_path),
             "text": full_description,
             "translated_text": translation,
         }
@@ -101,7 +102,9 @@ async def chat_with_image_test(file: UploadFile = File(...), prompt: str = ""):
 
 @router.get("/download/{filename}")
 async def download_audio(background_tasks: BackgroundTasks, filename: str):
-    file_path = os.path.join(AUDIO_FILES_DIRECTORY, filename)
+    temp_dir = tempfile.gettempdir()
+    file_path = os.path.join(temp_dir, filename)
+
     if os.path.isfile(file_path):
         response = FileResponse(
             path=file_path, media_type='audio/mpeg', filename=filename)
