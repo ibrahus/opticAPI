@@ -1,5 +1,7 @@
-fastapi 0.104.1
-uvicorn 0.23.2
-replicate 0.15.5
-gTTS 2.4.0
-deep-translator 1.11.4
+fastapi==0.104.1
+uvicorn==0.23.2
+replicate==0.15.5
+gTTS==2.4.0
+deep-translator==1.11.4
+python-dotenv==1.0.0
+python-multipart==0.0.6
