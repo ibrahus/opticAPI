@@ -1,10 +1,11 @@
 import base64
+import io
 import logging
 import os
-from click import File
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from gtts import gTTS
 import requests
 
 
@@ -50,16 +51,30 @@ async def process_image_with_gpt4_vision(upload_file: UploadFile, prompt: str) -
         raise
 
 
+def generate_tts_audio(text, lang='ar'):
+    """Generator function to yield audio chunks from gTTS."""
+    tts = gTTS(text=text, lang=lang)
+    with io.BytesIO() as audio_buffer:
+        tts.write_to_fp(audio_buffer)
+        audio_buffer.seek(0)
+        while chunk := audio_buffer.read(1024):
+            yield chunk
+
+
 @router.post("/chat-with-image-gpt4")
-async def chat_with_image_gpt4_vision(file: UploadFile = File(...), prompt: str = ""):
+async def chat_with_image_gpt4_vision(file: UploadFile = File(...),
+                                      prompt: str = "Describe the image in Arabic language"):
     try:
         full_description = await process_image_with_gpt4_vision(file, prompt)
 
-        response = requests.post("https://api.openai.com/v1/audio/speech", headers=get_openai_headers(
-        ), json={"model": "tts-1", "input": full_description, "voice": "onyx"})
-        response.raise_for_status()
+        # response = requests.post("https://api.openai.com/v1/audio/speech", headers=get_openai_headers(
+        # ), json={"model": "tts-1", "input": full_description, "voice": "onyx"})
+        # response.raise_for_status()
+        # return StreamingResponse(response.iter_content(chunk_size=1024 * 1024), media_type="audio/mpeg")
 
-        return StreamingResponse(response.iter_content(chunk_size=1024 * 1024), media_type="audio/mpeg")
+        # Stream the TTS response
+        return StreamingResponse(generate_tts_audio(full_description), media_type="audio/mpeg")
+
     except requests.HTTPError as http_err:
         logger.error(f"HTTP error occurred: {http_err}")
         raise HTTPException(status_code=500, detail=str(http_err))
