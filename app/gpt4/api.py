@@ -29,6 +29,8 @@ async def process_image_with_gpt4_vision(upload_file: UploadFile, prompt: str) -
         image_data = await upload_file.read()
         base64_image = base64.b64encode(image_data).decode('utf-8')
 
+        prompt = prompt or "Describe the image in Arabic language"
+
         logger.info(f"prompt: {prompt}")
 
         data = {
@@ -65,7 +67,7 @@ def generate_tts_audio(text, lang='ar'):
 
 @router.post("/chat-with-image-gpt4")
 async def chat_with_image_gpt4_vision(file: UploadFile = File(...),
-                                      prompt: str = "Describe the image in Arabic language"):
+                                      prompt: str = ""):
     try:
         full_description = await process_image_with_gpt4_vision(file, prompt)
 
