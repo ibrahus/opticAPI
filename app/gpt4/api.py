@@ -29,6 +29,8 @@ async def process_image_with_gpt4_vision(upload_file: UploadFile, prompt: str) -
         image_data = await upload_file.read()
         base64_image = base64.b64encode(image_data).decode('utf-8')
 
+        logger.info(f"prompt: {prompt}")
+
         data = {
             "model": "gpt-4-vision-preview",
             "messages": [
