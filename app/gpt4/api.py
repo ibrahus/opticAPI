@@ -1,12 +1,17 @@
 import base64
+from datetime import datetime, timedelta
 import io
 import logging
 import os
 from dotenv import load_dotenv
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from gtts import gTTS
 import requests
+from app.database import async_session
+
+from app.models import ChatEntry
+from app.schemas import DeviceInfo
 
 
 router = APIRouter()
@@ -67,14 +72,24 @@ def generate_tts_audio(text, lang='ar'):
 
 @router.post("/chat-with-image-gpt4")
 async def chat_with_image_gpt4_vision(file: UploadFile = File(...),
-                                      prompt: str = ""):
+                                      prompt: str = "",
+                                      device_info: DeviceInfo = Depends()):
     try:
         full_description = await process_image_with_gpt4_vision(file, prompt)
 
-        # response = requests.post("https://api.openai.com/v1/audio/speech", headers=get_openai_headers(
-        # ), json={"model": "tts-1", "input": full_description, "voice": "onyx"})
-        # response.raise_for_status()
-        # return StreamingResponse(response.iter_content(chunk_size=1024 * 1024), media_type="audio/mpeg")
+        created_at = datetime.utcnow() + timedelta(hours=3)
+
+        # Save to database
+        async with async_session() as session:
+            chat_entry = ChatEntry(
+                device_name=device_info.device_name,
+                device_id=device_info.device_id,
+                prompt=prompt,
+                full_description=full_description,
+                created_date=created_at
+            )
+            session.add(chat_entry)
+            await session.commit()
 
         # Stream the TTS response
         return StreamingResponse(generate_tts_audio(full_description), media_type="audio/mpeg")

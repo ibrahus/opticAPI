@@ -1,10 +1,24 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+from app.database import init_db
 from app.llava import api as llava
 from app.gpt4 import api as gpt4
 
 app = FastAPI()
+
+# Define startup event handler
+async def startup():
+    await init_db()
+
+# Define shutdown event handler
+async def shutdown():
+    # Perform any cleanup or shutdown tasks here
+    pass
+
+# Register the event handlers
+app.add_event_handler("startup", startup)
+app.add_event_handler("shutdown", shutdown)
 
 # Set up CORS middleware options
 app.add_middleware(
