@@ -4,7 +4,7 @@ import io
 import logging
 import os
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from gtts import gTTS
 import requests
@@ -73,7 +73,8 @@ def generate_tts_audio(text, lang='ar'):
 @router.post("/chat-with-image-gpt4")
 async def chat_with_image_gpt4_vision(file: UploadFile = File(...),
                                       prompt: str = "",
-                                      device_info: DeviceInfo = Depends()):
+                                      device_name: str = Form(...),
+                                      device_id: str = Form(...)):
     try:
         full_description = await process_image_with_gpt4_vision(file, prompt)
 
@@ -82,8 +83,8 @@ async def chat_with_image_gpt4_vision(file: UploadFile = File(...),
         # Save to database
         async with async_session() as session:
             chat_entry = ChatEntry(
-                device_name=device_info.device_name,
-                device_id=device_info.device_id,
+                device_name=device_name,
+                device_id=device_id,
                 prompt=prompt,
                 full_description=full_description,
                 created_date=created_at
