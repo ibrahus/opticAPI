@@ -1,5 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class DeviceInfo(BaseModel):
-    device_name: str = None
-    device_id: str = None
+    device_name: str = Field(None, alias='deviceName')
+    device_id: str = Field(None, alias='deviceId')
