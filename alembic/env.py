@@ -10,6 +10,9 @@ from app.models import Base
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost/optic_db")
 
+if DATABASE_URL and "?ssl=disable" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("?ssl=disable", "")
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
