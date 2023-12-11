@@ -10,5 +10,6 @@ class ChatEntry(Base):
     device_name = Column(String)
     device_id = Column(String, index=True)
     prompt = Column(String)
+    model = Column(String)
     full_description = Column(String)
     created_date = Column(DateTime(timezone=True))
