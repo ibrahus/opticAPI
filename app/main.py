@@ -9,7 +9,7 @@ app = FastAPI()
 
 # Define startup event handler
 async def startup():
-    await init_db()
+    # await init_db()
 
 # Define shutdown event handler
 async def shutdown():
